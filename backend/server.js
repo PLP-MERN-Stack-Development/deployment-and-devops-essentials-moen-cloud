@@ -1,0 +1,70 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import connectDB from './config/db.js';
+import bugRoutes from './routes/bugRoutes.js';
+import { errorHandler, notFound } from './middleware/errorMiddleware.js';
+
+// Load environment variables
+dotenv.config();
+
+// Initialize Express app
+const app = express();
+
+// Connect to MongoDB
+if (process.env.NODE_ENV !== 'test') {
+  connectDB();
+}
+
+// Middleware
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  credentials: true
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Request logging middleware (for debugging)
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Bug Tracker API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// API Routes
+app.use('/api/bugs', bugRoutes);
+
+// Error Handling Middleware (must be after routes)
+app.use(notFound);
+app.use(errorHandler);
+
+// Start server
+const PORT = process.env.PORT || 5000;
+let server;
+
+if (process.env.NODE_ENV !== 'test') {
+  server = app.listen(PORT, () => {
+    console.log(` Server running on port ${PORT}`);
+    console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  if (server) {
+    server.close(() => {
+      console.log('HTTP server closed');
+    });
+  }
+});
+
+export default app;
