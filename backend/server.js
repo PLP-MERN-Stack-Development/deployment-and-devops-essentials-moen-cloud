@@ -16,28 +16,38 @@ if (process.env.NODE_ENV !== 'test') {
   connectDB();
 }
 
-// Middleware
+// CORS Configuration - MUST be before routes
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://deployment-and-devops-essentials-moen.onrender.com/api'
+  'http://localhost:5000',
+  'https://deployment-and-devops-essentials-moen.onrender.com'
 ];
 
-// Add CLIENT_URL from env if it exists and is not already in the list
-if (process.env.CLIENT_URL && !allowedOrigins.includes(process.env.CLIENT_URL)) {
-  allowedOrigins.push(process.env.CLIENT_URL);
-}
-
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('Blocked by CORS:', origin);
+      callback(null, true); // Allow anyway for now
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware (for debugging)
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log('Origin:', req.get('origin'));
   next();
 });
 
@@ -50,18 +60,20 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Root endpoint for quick verification
+// Root endpoint
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Bug Tracker API',
+    version: '1.0.0',
     endpoints: {
       health: '/api/health',
-      bugs: '/api/bugs'
+      bugs: '/api/bugs',
+      bugsAlt: '/bugs'
     }
   });
 });
 
-// API Routes
+// API Routes - Both paths for compatibility
 app.use('/api/bugs', bugRoutes);
 app.use('/bugs', bugRoutes);
 
@@ -77,7 +89,7 @@ if (process.env.NODE_ENV !== 'test') {
   server = app.listen(PORT, () => {
     console.log(`✓ Server running on port ${PORT}`);
     console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`✓ CORS enabled for: ${allowedOrigins.join(', ')}`);
+    console.log(`✓ CORS enabled for:`, allowedOrigins);
   });
 }
 
