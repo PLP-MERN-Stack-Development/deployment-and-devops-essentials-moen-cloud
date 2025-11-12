@@ -17,16 +17,23 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://deployment-and-devops-essentials-moen.onrender.com'
+];
+
+// Add CLIENT_URL from env if it exists and is not already in the list
+if (process.env.CLIENT_URL && !allowedOrigins.includes(process.env.CLIENT_URL)) {
+  allowedOrigins.push(process.env.CLIENT_URL);
+}
+
 app.use(cors({
-  origin: [
-    process.env.CLIENT_URL || 'http://localhost:5173',
-    'https://deployment-and-devops-essentials-moen.onrender.com'
-  ],
+  origin: allowedOrigins,
   credentials: true
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 
 // Request logging middleware (for debugging)
 app.use((req, res, next) => {
@@ -43,6 +50,17 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Root endpoint for quick verification
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Bug Tracker API',
+    endpoints: {
+      health: '/api/health',
+      bugs: '/api/bugs'
+    }
+  });
+});
+
 // API Routes
 app.use('/api/bugs', bugRoutes);
 
@@ -56,8 +74,9 @@ let server;
 
 if (process.env.NODE_ENV !== 'test') {
   server = app.listen(PORT, () => {
-    console.log(` Server running on port ${PORT}`);
-    console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`✓ Server running on port ${PORT}`);
+    console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`✓ CORS enabled for: ${allowedOrigins.join(', ')}`);
   });
 }
 
