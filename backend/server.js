@@ -18,11 +18,15 @@ if (process.env.NODE_ENV !== 'test') {
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: [
+    process.env.CLIENT_URL || 'http://localhost:5173',
+    'https://deployment-and-devops-essentials-moen.onrender.com'
+  ],
   credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 
 // Request logging middleware (for debugging)
 app.use((req, res, next) => {
