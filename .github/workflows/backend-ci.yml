@@ -19,7 +19,7 @@ defaults:
 jobs:
   test:
     name: Run Tests
-    runs-on: windows-latest
+    runs-on: ubuntu-latest  #  CHANGED: Must be Linux for Docker containers
     
     services:
       mongodb:
@@ -78,7 +78,7 @@ jobs:
 
   lint:
     name: Code Quality Check
-    runs-on: windows-latest
+    runs-on: ubuntu-latest  # ✅ CHANGED: For consistency (optional but recommended)
     
     steps:
       - name: Checkout code
@@ -102,7 +102,7 @@ jobs:
 
   security:
     name: Security Audit
-    runs-on: windows-latest
+    runs-on: ubuntu-latest  # ✅ CHANGED: For consistency (optional but recommended)
     
     steps:
       - name: Checkout code
@@ -128,7 +128,7 @@ jobs:
 
   build-check:
     name: Build Validation
-    runs-on: windows-latest
+    runs-on: ubuntu-latest  # ✅ CHANGED: For consistency (optional but recommended)
     needs: [test]
     
     steps:
