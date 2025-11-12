@@ -19,7 +19,7 @@ if (process.env.NODE_ENV !== 'test') {
 // Middleware
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://deployment-and-devops-essentials-moen.onrender.com'
+  'https://deployment-and-devops-essentials-moen.onrender.com/api'
 ];
 
 // Add CLIENT_URL from env if it exists and is not already in the list
@@ -63,6 +63,7 @@ app.get('/', (req, res) => {
 
 // API Routes
 app.use('/api/bugs', bugRoutes);
+app.use('/bugs', bugRoutes);
 
 // Error Handling Middleware (must be after routes)
 app.use(notFound);
