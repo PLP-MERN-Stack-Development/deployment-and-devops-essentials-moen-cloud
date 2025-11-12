@@ -1,0 +1,132 @@
+name: Backend CD - Deploy to Render
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-cd.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Render
+    runs-on: windows-latest
+    environment:
+      name: production
+      url: https://bug-tracker-backend-2z4i.onrender.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Trigger Render Deploy
+        run: |
+          echo "🚀 Triggering Render deployment..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}")
+          
+          if [ $response -eq 200 ] || [ $response -eq 201 ]; then
+            echo "✅ Deployment triggered successfully (HTTP $response)"
+          else
+            echo "❌ Deployment trigger failed (HTTP $response)"
+            exit 1
+          fi
+      
+      - name: Wait for deployment
+        run: |
+          echo "⏳ Waiting for Render to deploy..."
+          echo "This typically takes 2-5 minutes"
+          sleep 120
+      
+      - name: Health check with retries
+        run: |
+          echo "🏥 Checking application health..."
+          max_retries=15
+          retry_count=0
+          wait_time=15
+          
+          while [ $retry_count -lt $max_retries ]; do
+            echo "Attempt $((retry_count + 1))/$max_retries..."
+            
+            if curl -f -s https://bug-tracker-backend-2z4i.onrender.com/api/health > /dev/null; then
+              echo "✅ Backend is healthy!"
+              
+              # Display health info
+              curl -s https://bug-tracker-backend-2z4i.onrender.com/api/health | jq '.' || true
+              exit 0
+            fi
+            
+            retry_count=$((retry_count + 1))
+            
+            if [ $retry_count -lt $max_retries ]; then
+              echo "⏳ Backend not ready yet. Waiting ${wait_time}s before retry..."
+              sleep $wait_time
+            fi
+          done
+          
+          echo "❌ Health check failed after $max_retries attempts"
+          echo "Please check Render logs: https://dashboard.render.com"
+          exit 1
+      
+      - name: Test API endpoints
+        run: |
+          echo "🧪 Testing API endpoints..."
+          
+          # Test GET /api/bugs
+          echo "Testing GET /api/bugs..."
+          curl -f -s https://bug-tracker-backend-2z4i.onrender.com/api/bugs > /dev/null && echo "✅ GET /bugs works" || echo "❌ GET /bugs failed"
+          
+          # Test GET /api/bugs/stats
+          echo "Testing GET /api/bugs/stats..."
+          curl -f -s https://bug-tracker-backend-2z4i.onrender.com/api/bugs/stats > /dev/null && echo "✅ GET /bugs/stats works" || echo "❌ GET /bugs/stats failed"
+          
+          echo "✅ Deployment verification complete!"
+
+  notify:
+    name: Send Notifications
+    runs-on: windows-latest
+    needs: [deploy]
+    if: always()
+    
+    steps:
+      - name: Send Slack notification
+        if: always() && secrets.SLACK_WEBHOOK != ''
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            emoji="✅"
+            color="good"
+            text="Backend deployment successful!"
+          else
+            emoji="❌"
+            color="danger"
+            text="Backend deployment failed!"
+          fi
+          
+          curl -X POST "${{ secrets.SLACK_WEBHOOK }}" \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"text\": \"$emoji Backend Deployment ${{ needs.deploy.result }}\",
+              \"attachments\": [{
+                \"color\": \"$color\",
+                \"fields\": [
+                  {\"title\": \"Status\", \"value\": \"$text\", \"short\": false},
+                  {\"title\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"short\": true},
+                  {\"title\": \"Commit\", \"value\": \"${{ github.sha }}\", \"short\": true},
+                  {\"title\": \"URL\", \"value\": \"https://bug-tracker-backend-2z4i.onrender.com\", \"short\": false}
+                ]
+              }]
+            }" || echo "Slack notification failed"
+        continue-on-error: true
+      
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && needs.deploy.result == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 Backend deployed successfully to Render!\n\n**URL:** https://bug-tracker-backend-2z4i.onrender.com\n**Health:** https://bug-tracker-backend-2z4i.onrender.com/api/health'
+            })
+        continue-on-error: true

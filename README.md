@@ -103,7 +103,7 @@ cd frontend
 npm install
 
 # Create .env file (optional)
-echo "VITE_API_URL=http://localhost:5000/api" > .env
+echo "VITE_API_URL=http://localhost:5000/api" 
 ```
 
 ### Step 4: Start MongoDB
@@ -124,14 +124,14 @@ sudo systemctl start mongodb
 cd backend
 npm run dev
 ```
-The backend server will start on `http://localhost:5000`
+The backend server will start on `https://bug-tracker-backend-2z4i.onrender.com/api`
 
 **Terminal 2 - Frontend:**
 ```bash
 cd frontend
 npm run dev
 ```
-The frontend will start on `http://localhost:5173`
+The frontend will start on `https://deployment-and-devops-essentials-moen.onrender.com/api`
 
 ### Production Mode
 
@@ -407,5 +407,48 @@ Created as a comprehensive demonstration of MERN stack development with emphasis
 - Testing Library Documentation
 
 ---
+# CI/CD Pipeline
 
-**Happy Bug Tracking! **
+This project uses GitHub Actions for continuous integration and Render for continuous deployment.
+Workflows
+Frontend CI (frontend-ci.yml)
+
+ Runs on push/PR to main/develop
+ ESLint code linting
+ Vitest unit & integration tests
+ Coverage reporting to Codecov
+ Production build validation
+ Security audit with npm audit
+
+Backend CI (backend-ci.yml)
+
+ Runs on push/PR to main/develop
+ MongoDB service container for testing
+ Jest unit & integration tests
+ Coverage reporting to Codecov
+ Security audit with npm audit
+
+Frontend CD (frontend-cd.yml)
+
+ Deploys to Render on push to main
+ Health checks with retry logic
+ Route testing after deployment
+ Slack notifications
+ PR comments with deployment URLs
+
+Backend CD (backend-cd.yml)
+
+ Deploys to Render on push to main
+ Health checks with 15 retry attempts
+ API endpoint testing
+ Deployment notifications
+ Display health information
+
+E2E Tests (e2e-tests.yml)
+
+ Full production smoke tests
+ Complete CRUD lifecycle testing
+ CORS configuration verification
+ Performance monitoring
+ Runs daily at 6 AM UTC
+ Can be triggered manually
