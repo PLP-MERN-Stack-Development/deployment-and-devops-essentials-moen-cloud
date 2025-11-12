@@ -1,4 +1,4 @@
-# 🐛 MERN Bug Tracker
+#  MERN Bug Tracker
 
 A full-stack bug tracking application built with MongoDB, Express.js, React, and Node.js (MERN stack). This project demonstrates comprehensive testing, debugging, and error handling practices for both frontend and backend development.
 
@@ -15,7 +15,7 @@ A full-stack bug tracking application built with MongoDB, Express.js, React, and
 - [API Documentation](#api-documentation)
 - [Contributing](#contributing)
 
-## ✨ Features
+##  Features
 
 - **Create, Read, Update, Delete (CRUD)** operations for bug reports
 - **Filter and sort** bugs by status, severity, and other criteria
