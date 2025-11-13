@@ -6,26 +6,32 @@ const BugList = ({ bugs, onRefresh }) => {
   const [sortBy, setSortBy] = useState('newest');
 
   // Sort bugs based on selected option
-  const sortedBugs = [...bugs].sort((a, b) => {
-    switch (sortBy) {
-      case 'newest':
-        return new Date(b.createdAt) - new Date(a.createdAt);
-      case 'oldest':
-        return new Date(a.createdAt) - new Date(b.createdAt);
-      case 'severity':
-        const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-        return severityOrder[a.severity] - severityOrder[b.severity];
-      case 'priority':
-        return b.priority - a.priority;
-      default:
-        return 0;
+  const getSortedBugs = () => {
+    const sorted = [...bugs];
+    
+    if (sortBy === 'newest') {
+      return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
-  });
+    if (sortBy === 'oldest') {
+      return sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    }
+    if (sortBy === 'severity') {
+      const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+      return sorted.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+    }
+    if (sortBy === 'priority') {
+      return sorted.sort((a, b) => b.priority - a.priority);
+    }
+    
+    return sorted;
+  };
+
+  const sortedBugs = getSortedBugs();
 
   if (bugs.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-        <div className="text-6xl mb-4"> </div>
+        <div className="text-6xl mb-4">🐛</div>
         <h3 className="text-2xl font-semibold text-gray-800 mb-2">
           No Bugs Found
         </h3>
