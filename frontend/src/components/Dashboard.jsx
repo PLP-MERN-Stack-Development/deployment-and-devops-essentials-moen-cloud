@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import BugList from './BugList';
 import BugStats from './BugStats';
@@ -16,12 +16,7 @@ const Dashboard = () => {
     severity: ''
   });
 
-  // Fetch bugs and stats on component mount
-  useEffect(() => {
-    fetchData();
-  }, [filters]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -34,14 +29,19 @@ const Dashboard = () => {
       const statsData = await getBugStats();
       setStats(statsData);
 
-      console.log(' Dashboard data loaded successfully');
+      console.log('✅ Dashboard data loaded successfully');
     } catch (err) {
-      console.error(' Error loading dashboard:', err);
+      console.error('❌ Error loading dashboard:', err);
       setError(err.message || 'Failed to load bugs');
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
+
+  // Fetch bugs and stats on component mount
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleFilterChange = (filterType, value) => {
     setFilters(prev => ({
@@ -83,7 +83,7 @@ const Dashboard = () => {
             onClick={handleRefresh}
             className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
           >
-             Refresh
+            🔄 Refresh
           </button>
           <Link
             to="/create"

@@ -10,7 +10,7 @@ class ErrorBoundary extends React.Component {
     };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(_error) {
     // Update state so the next render will show the fallback UI
     return { hasError: true };
   }
@@ -43,7 +43,7 @@ class ErrorBoundary extends React.Component {
         <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
           <div className="max-w-2xl w-full bg-white rounded-lg shadow-lg p-8">
             <div className="text-center mb-6">
-              <div className="text-6xl mb-4"> </div>
+              <div className="text-6xl mb-4">💥</div>
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
                 Oops! Something went wrong
               </h1>
@@ -52,7 +52,7 @@ class ErrorBoundary extends React.Component {
               </p>
             </div>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                 <h3 className="text-red-800 font-semibold mb-2">Error Details:</h3>
                 <pre className="text-sm text-red-700 overflow-x-auto">

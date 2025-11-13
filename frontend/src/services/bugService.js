@@ -50,76 +50,52 @@ api.interceptors.response.use(
  * Get all bugs with optional filters
  */
 export const getAllBugs = async (filters = {}) => {
-  try {
-    const params = new URLSearchParams();
-    if (filters.status) params.append('status', filters.status);
-    if (filters.severity) params.append('severity', filters.severity);
-    
-    const response = await api.get(`/bugs?${params.toString()}`);
-    return response.data.data;
-  } catch (error) {
-    throw error;
-  }
+  const params = new URLSearchParams();
+  if (filters.status) params.append('status', filters.status);
+  if (filters.severity) params.append('severity', filters.severity);
+  
+  const response = await api.get(`/bugs?${params.toString()}`);
+  return response.data.data;
 };
 
 /**
  * Get single bug by ID
  */
 export const getBugById = async (id) => {
-  try {
-    const response = await api.get(`/bugs/${id}`);
-    return response.data.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await api.get(`/bugs/${id}`);
+  return response.data.data;
 };
 
 /**
  * Create new bug
  */
 export const createBug = async (bugData) => {
-  try {
-    const response = await api.post('/bugs', bugData);
-    return response.data.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await api.post('/bugs', bugData);
+  return response.data.data;
 };
 
 /**
  * Update existing bug
  */
 export const updateBug = async (id, bugData) => {
-  try {
-    const response = await api.put(`/bugs/${id}`, bugData);
-    return response.data.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await api.put(`/bugs/${id}`, bugData);
+  return response.data.data;
 };
 
 /**
  * Delete bug
  */
 export const deleteBug = async (id) => {
-  try {
-    const response = await api.delete(`/bugs/${id}`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await api.delete(`/bugs/${id}`);
+  return response.data;
 };
 
 /**
  * Get bug statistics
  */
 export const getBugStats = async () => {
-  try {
-    const response = await api.get('/bugs/stats');
-    return response.data.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await api.get('/bugs/stats');
+  return response.data.data;
 };
 
 export default api;

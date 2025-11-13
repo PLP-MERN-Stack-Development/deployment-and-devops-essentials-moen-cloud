@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import BugItem from '../components/BugItem';
 import * as bugService from '../services/bugService';
@@ -20,6 +20,10 @@ const mockBug = {
 
 describe('BugItem Component', () => {
   const mockOnRefresh = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   const renderBugItem = (bug = mockBug) => {
     return render(
@@ -54,12 +58,16 @@ describe('BugItem Component', () => {
     const deleteButton = screen.getByText(/delete/i);
     fireEvent.click(deleteButton);
     
-    expect(window.confirm).toHaveBeenCalled();
-    expect(bugService.deleteBug).toHaveBeenCalledWith('123');
+    await waitFor(() => {
+      expect(window.confirm).toHaveBeenCalled();
+      expect(bugService.deleteBug).toHaveBeenCalledWith('123');
+      expect(mockOnRefresh).toHaveBeenCalled();
+    });
   });
 
   it('does not delete when confirmation is cancelled', () => {
     window.confirm = vi.fn(() => false);
+    bugService.deleteBug.mockResolvedValue({});
     
     renderBugItem();
     

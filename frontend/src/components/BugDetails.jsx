@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getBugById, deleteBug } from '../services/bugService';
-import { formatDate, formatDateTime } from '../utils/helpers';
+import { formatDateTime } from '../utils/helpers';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
 
@@ -12,11 +12,7 @@ const BugDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchBugDetails();
-  }, [id]);
-
-  const fetchBugDetails = async () => {
+  const fetchBugDetails = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -29,7 +25,11 @@ const BugDetails = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchBugDetails();
+  }, [fetchBugDetails]);
 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this bug?')) {
@@ -112,13 +112,13 @@ const BugDetails = () => {
               to={`/edit/${bug._id}`}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
             >
-               Edit
+              ✏️ Edit
             </Link>
             <button
               onClick={handleDelete}
               className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
             >
-               Delete
+              🗑️ Delete
             </button>
           </div>
         </div>
