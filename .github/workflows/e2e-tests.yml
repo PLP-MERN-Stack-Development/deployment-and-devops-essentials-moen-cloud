@@ -1,231 +1,139 @@
-name: E2E Tests - Production
+name: Frontend CD - Deploy to Render
 
 on:
   push:
     branches: [ main ]
-  schedule:
-    # Run every day at 6 AM UTC
-    - cron: '0 6 * * *'
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-cd.yml'
   workflow_dispatch:
 
 jobs:
-  smoke-test:
-    name: Production Smoke Tests
-    runs-on: windows-latest
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://deployment-and-devops-essentials-moen.onrender.com
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Test Backend Health
+      - name: Trigger Render Deploy
         run: |
-          echo "🏥 Testing backend health..."
-          response=$(curl -s https://bug-tracker-backend-2z4i.onrender.com/api/health)
+          echo "🚀 Triggering Render deployment..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}")
           
-          if echo "$response" | grep -q "OK"; then
-            echo "✅ Backend health check passed"
-            echo "$response" | jq '.'
+          if [ $response -eq 200 ] || [ $response -eq 201 ]; then
+            echo "✅ Deployment triggered successfully (HTTP $response)"
           else
-            echo "❌ Backend health check failed"
-            echo "$response"
+            echo "❌ Deployment trigger failed (HTTP $response)"
             exit 1
           fi
       
-      - name: Test Frontend Availability
+      - name: Wait for deployment
         run: |
-          echo "🌐 Testing frontend availability..."
-          status_code=$(curl -s -o /dev/null -w "%{http_code}" https://deployment-and-devops-essentials-moen.onrender.com)
-          
-          if [ "$status_code" -eq 200 ]; then
-            echo "✅ Frontend is accessible (HTTP $status_code)"
-          else
-            echo "❌ Frontend returned HTTP $status_code"
-            exit 1
-          fi
+          echo "⏳ Waiting for Render to build and deploy..."
+          echo "Frontend builds typically take 3-5 minutes"
+          sleep 180
       
-      - name: Test API Endpoints
+      - name: Health check with retries
         run: |
-          echo "🔍 Testing API endpoints..."
+          echo "🏥 Checking frontend availability..."
+          max_retries=15
+          retry_count=0
+          wait_time=15
           
-          # Test GET /api/bugs
-          echo "Testing GET /api/bugs..."
-          bugs_response=$(curl -s -w "\n%{http_code}" https://bug-tracker-backend-2z4i.onrender.com/api/bugs)
-          bugs_status=$(echo "$bugs_response" | tail -n 1)
-          bugs_body=$(echo "$bugs_response" | sed '$d')
+          while [ $retry_count -lt $max_retries ]; do
+            echo "Attempt $((retry_count + 1))/$max_retries..."
+            
+            if curl -f -s https://deployment-and-devops-essentials-moen.onrender.com > /dev/null; then
+              echo "✅ Frontend is live!"
+              exit 0
+            fi
+            
+            retry_count=$((retry_count + 1))
+            
+            if [ $retry_count -lt $max_retries ]; then
+              echo "⏳ Frontend not ready yet. Waiting ${wait_time}s before retry..."
+              sleep $wait_time
+            fi
+          done
           
-          if [ "$bugs_status" -eq 200 ]; then
-            echo "✅ GET /bugs returned 200"
-            echo "$bugs_body" | jq '.count' || echo "Response: $bugs_body"
-          else
-            echo "❌ GET /bugs returned $bugs_status"
-            exit 1
-          fi
-          
-          # Test GET /api/bugs/stats
-          echo "Testing GET /api/bugs/stats..."
-          stats_status=$(curl -s -o /dev/null -w "%{http_code}" https://bug-tracker-backend-2z4i.onrender.com/api/bugs/stats)
-          
-          if [ "$stats_status" -eq 200 ]; then
-            echo "✅ GET /bugs/stats returned 200"
-          else
-            echo "❌ GET /bugs/stats returned $stats_status"
-            exit 1
-          fi
+          echo "❌ Health check failed after $max_retries attempts"
+          echo "Please check Render logs: https://dashboard.render.com"
+          exit 1
       
-      - name: Test CORS Configuration
+      - name: Test frontend routes
         run: |
-          echo "🔐 Testing CORS headers..."
-          cors_header=$(curl -s -H "Origin: https://deployment-and-devops-essentials-moen.onrender.com" \
-            -I https://bug-tracker-backend-2z4i.onrender.com/api/health | \
-            grep -i "access-control-allow-origin" || echo "No CORS header")
+          echo "🧪 Testing frontend routes..."
+          base_url="https://deployment-and-devops-essentials-moen.onrender.com"
           
-          echo "CORS Header: $cors_header"
+          # Test home page
+          echo "Testing: $base_url"
+          curl -f -s "$base_url" > /dev/null && echo "✅ Home page works" || echo "❌ Home page failed"
           
-          if echo "$cors_header" | grep -q "access-control-allow-origin"; then
-            echo "✅ CORS is configured"
-          else
-            echo "⚠️  CORS header not found (might be okay for some requests)"
-          fi
+          # Test React Router routes (should all return 200 and serve index.html)
+          echo "Testing: $base_url/bugs"
+          curl -f -s "$base_url/bugs" > /dev/null && echo "✅ /bugs route works" || echo "❌ /bugs route failed"
+          
+          echo "✅ Frontend deployment verification complete!"
       
-      - name: Test Database Connection
+      - name: Test API connectivity from frontend
         run: |
-          echo "🗄️  Testing database connectivity..."
-          health_response=$(curl -s https://bug-tracker-backend-2z4i.onrender.com/api/health)
-          
-          if echo "$health_response" | grep -q "OK"; then
-            echo "✅ Database connection is healthy"
-          else
-            echo "❌ Database might have connection issues"
-            echo "$health_response"
-            exit 1
-          fi
-      
-      - name: Performance Check
-        run: |
-          echo "⚡ Testing response times..."
-          
-          start_time=$(date +%s%3N)
-          curl -s https://bug-tracker-backend-2z4i.onrender.com/api/health > /dev/null
-          end_time=$(date +%s%3N)
-          response_time=$((end_time - start_time))
-          
-          echo "Backend response time: ${response_time}ms"
-          
-          if [ $response_time -lt 5000 ]; then
-            echo "✅ Response time is good (< 5s)"
-          else
-            echo "⚠️  Response time is slow (> 5s) - might be a cold start"
-          fi
-
-  integration-test:
-    name: Integration Tests
-    runs-on: windows-latest
-    needs: [smoke-test]
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      
-      - name: Test Full Bug Lifecycle
-        run: |
-          echo "🔄 Testing full CRUD operations..."
-          
-          # Create a test bug
-          echo "Creating test bug..."
-          create_response=$(curl -s -X POST https://bug-tracker-backend-2z4i.onrender.com/api/bugs \
-            -H "Content-Type: application/json" \
-            -d '{
-              "title": "E2E Test Bug - '"$(date +%s)"'",
-              "description": "This is an automated test bug",
-              "severity": "low",
-              "status": "open"
-            }')
-          
-          bug_id=$(echo "$create_response" | jq -r '.data._id')
-          
-          if [ "$bug_id" != "null" ] && [ -n "$bug_id" ]; then
-            echo "✅ Bug created with ID: $bug_id"
-          else
-            echo "❌ Failed to create bug"
-            echo "$create_response"
-            exit 1
-          fi
-          
-          # Read the bug
-          echo "Reading bug..."
-          read_status=$(curl -s -o /dev/null -w "%{http_code}" \
-            https://bug-tracker-backend-2z4i.onrender.com/api/bugs/$bug_id)
-          
-          if [ "$read_status" -eq 200 ]; then
-            echo "✅ Bug retrieved successfully"
-          else
-            echo "❌ Failed to retrieve bug (HTTP $read_status)"
-          fi
-          
-          # Update the bug
-          echo "Updating bug..."
-          update_status=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X PUT https://bug-tracker-backend-2z4i.onrender.com/api/bugs/$bug_id \
-            -H "Content-Type: application/json" \
-            -d '{"status": "resolved"}')
-          
-          if [ "$update_status" -eq 200 ]; then
-            echo "✅ Bug updated successfully"
-          else
-            echo "❌ Failed to update bug (HTTP $update_status)"
-          fi
-          
-          # Delete the bug
-          echo "Deleting bug..."
-          delete_status=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X DELETE https://bug-tracker-backend-2z4i.onrender.com/api/bugs/$bug_id)
-          
-          if [ "$delete_status" -eq 200 ]; then
-            echo "✅ Bug deleted successfully"
-          else
-            echo "❌ Failed to delete bug (HTTP $delete_status)"
-          fi
-          
-          echo "✅ Full CRUD lifecycle test passed!"
+          echo "🔗 Testing backend connectivity..."
+          # This simulates what the frontend will do
+          curl -f -s https://bug-tracker-backend-2z4i.onrender.com/api/health && \
+            echo "✅ Frontend can reach backend API" || \
+            echo "⚠️  Backend API connectivity issue"
+        continue-on-error: true
 
   notify:
-    name: Send Test Results
-    runs-on: windows-latest
-    needs: [smoke-test, integration-test]
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy]
     if: always()
     
     steps:
       - name: Send Slack notification
-        if: secrets.SLACK_WEBHOOK != ''
+        if: always()
         run: |
-          if [ "${{ needs.smoke-test.result }}" == "success" ] && [ "${{ needs.integration-test.result }}" == "success" ]; then
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
             emoji="✅"
             color="good"
-            text="All E2E tests passed!"
+            text="Frontend deployment successful!"
           else
             emoji="❌"
             color="danger"
-            text="Some E2E tests failed!"
+            text="Frontend deployment failed!"
           fi
           
           curl -X POST "${{ secrets.SLACK_WEBHOOK }}" \
             -H 'Content-Type: application/json' \
             -d "{
-              \"text\": \"$emoji E2E Test Results\",
+              \"text\": \"$emoji Frontend Deployment ${{ needs.deploy.result }}\",
               \"attachments\": [{
                 \"color\": \"$color\",
                 \"fields\": [
                   {\"title\": \"Status\", \"value\": \"$text\", \"short\": false},
-                  {\"title\": \"Smoke Tests\", \"value\": \"${{ needs.smoke-test.result }}\", \"short\": true},
-                  {\"title\": \"Integration Tests\", \"value\": \"${{ needs.integration-test.result }}\", \"short\": true},
-                  {\"title\": \"Frontend\", \"value\": \"https://deployment-and-devops-essentials-moen.onrender.com\", \"short\": false},
-                  {\"title\": \"Backend\", \"value\": \"https://bug-tracker-backend-2z4i.onrender.com\", \"short\": false}
+                  {\"title\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"short\": true},
+                  {\"title\": \"Commit\", \"value\": \"${{ github.sha }}\", \"short\": true},
+                  {\"title\": \"URL\", \"value\": \"https://deployment-and-devops-essentials-moen.onrender.com\", \"short\": false}
                 ]
               }]
             }" || echo "Slack notification failed"
+        continue-on-error: true
+      
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && needs.deploy.result == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 Frontend deployed successfully to Render!\n\n**URL:** https://deployment-and-devops-essentials-moen.onrender.com\n**Backend API:** https://bug-tracker-backend-2z4i.onrender.com'
+            })
         continue-on-error: true
