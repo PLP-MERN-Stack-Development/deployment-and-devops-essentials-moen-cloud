@@ -1,0 +1,27 @@
+{
+  "name": "mern-week7",
+  "version": "1.0.0",
+  "description": "A full-stack bug tracking application built with MongoDB, Express.js, React, and Node.js (MERN stack). This project demonstrates comprehensive testing, debugging, and error handling practices for both frontend and backend development.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PLP-MERN-Stack-Development/deployment-and-devops-essentials-moen-cloud.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/PLP-MERN-Stack-Development/deployment-and-devops-essentials-moen-cloud/issues"
+  },
+  "homepage": "https://github.com/PLP-MERN-Stack-Development/deployment-and-devops-essentials-moen-cloud#readme",
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.5.0"
+  }
+}
